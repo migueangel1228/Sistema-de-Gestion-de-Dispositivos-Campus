@@ -120,6 +120,23 @@ alter table public.missions enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.maintenance_orders enable row level security;
 
+-- Limpiar políticas existentes si se re-ejecuta
+drop policy if exists "Permitir lectura publica a profiles" on public.profiles;
+drop policy if exists "Permitir lectura publica a devices" on public.devices;
+drop policy if exists "Permitir lectura publica a meeting_points" on public.meeting_points;
+drop policy if exists "Permitir lectura publica a reservations" on public.reservations;
+drop policy if exists "Permitir lectura publica a missions" on public.missions;
+drop policy if exists "Permitir lectura publica a audit_logs" on public.audit_logs;
+drop policy if exists "Permitir lectura publica a maintenance_orders" on public.maintenance_orders;
+
+drop policy if exists "Permitir operaciones sobre profiles" on public.profiles;
+drop policy if exists "Permitir operaciones sobre devices" on public.devices;
+drop policy if exists "Permitir operaciones sobre meeting_points" on public.meeting_points;
+drop policy if exists "Permitir operaciones sobre reservations" on public.reservations;
+drop policy if exists "Permitir operaciones sobre missions" on public.missions;
+drop policy if exists "Permitir insercion inmutable audit_logs" on public.audit_logs;
+drop policy if exists "Permitir operaciones sobre maintenance_orders" on public.maintenance_orders;
+
 -- Acceso de lectura pública (anon y authenticated)
 create policy "Permitir lectura publica a profiles" on public.profiles for select to public using (true);
 create policy "Permitir lectura publica a devices" on public.devices for select to public using (true);
@@ -129,7 +146,7 @@ create policy "Permitir lectura publica a missions" on public.missions for selec
 create policy "Permitir lectura publica a audit_logs" on public.audit_logs for select to public using (true);
 create policy "Permitir lectura publica a maintenance_orders" on public.maintenance_orders for select to public using (true);
 
--- Acceso de escritura y actualización para la consola operativa
+-- Acceso de operaciones para la consola operativa
 create policy "Permitir operaciones sobre profiles" on public.profiles for all to public using (true) with check (true);
 create policy "Permitir operaciones sobre devices" on public.devices for all to public using (true) with check (true);
 create policy "Permitir operaciones sobre meeting_points" on public.meeting_points for all to public using (true) with check (true);
@@ -157,6 +174,10 @@ on conflict (id) do update set
   allowed_mime_types = array['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg', 'image/png'];
 
 -- Políticas de acceso a storage.objects para el bucket drone-videos
+drop policy if exists "Public Access Drone Videos" on storage.objects;
+drop policy if exists "Public Upload Drone Videos" on storage.objects;
+drop policy if exists "Public Update Drone Videos" on storage.objects;
+
 create policy "Public Access Drone Videos"
   on storage.objects for select
   to public
