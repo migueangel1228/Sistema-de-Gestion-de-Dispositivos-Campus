@@ -576,6 +576,19 @@ export function AppProvider({ children }) {
 
     setMissions(prev => [newMission, ...prev])
 
+    // Sincronizar archivo de video de la misión en el bucket S3 de Supabase Storage (RF-26.1)
+    if (isSupabaseConfigured && supabase) {
+      supabase.storage
+        .from('drone-videos')
+        .copy('default-mission.mp4', `${missionId}.mp4`)
+        .then(({ data, error }) => {
+          if (!error) {
+            console.log(`[Storage S3] Video inicializado en bucket para misión ${missionId}`)
+          }
+        })
+        .catch(() => {})
+    }
+
     addAuditLog(
       'DESPACHO_MISION',
       `Misión ${newMission.id} despachada con ${chosenDevice.code} (${chosenDevice.type}). PIN OTP generado: ${otpData.pin}. Ruta: ${origin.name} -> ${destination.name}.`

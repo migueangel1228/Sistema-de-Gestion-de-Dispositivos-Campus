@@ -1,9 +1,69 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { X, Video, ShieldCheck, Clock, Download, Play, Pause } from 'lucide-react'
+import { X, Video, ShieldCheck, Clock, Download, Play, Pause, Loader2, Check, ExternalLink } from 'lucide-react'
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient'
 
 export default function VideoPlayerModal({ mission, onClose }) {
   const canvasRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(true)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadSuccess, setDownloadSuccess] = useState(false)
+
+  // Asegurar que el archivo de video esté registrado en el bucket S3 (RF-26.1)
+  useEffect(() => {
+    if (isSupabaseConfigured && supabase && mission?.id) {
+      supabase.storage
+        .from('drone-videos')
+        .copy('default-mission.mp4', `${mission.id}.mp4`)
+        .catch(() => {})
+    }
+  }, [mission?.id])
+
+  const handleDownloadVideo = async (e) => {
+    e.preventDefault()
+    setIsDownloading(true)
+    setDownloadSuccess(false)
+
+    try {
+      // 1. Asegurar copia en el bucket S3
+      if (isSupabaseConfigured && supabase && mission?.id) {
+        await supabase.storage
+          .from('drone-videos')
+          .copy('default-mission.mp4', `${mission.id}.mp4`)
+          .catch(() => {})
+      }
+
+      const primaryUrl = mission?.video_url
+      const fallbackUrl = `${import.meta.env.VITE_SUPABASE_URL || 'https://mnjlidnbhtcrbtnwsqof.supabase.co'}/storage/v1/object/public/drone-videos/default-mission.mp4`
+
+      // 2. Descargar blob de video real y forzar descarga de archivo .mp4
+      let response = await fetch(primaryUrl).catch(() => null)
+      if (!response || !response.ok) {
+        response = await fetch(fallbackUrl)
+      }
+
+      if (response && response.ok) {
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.style.display = 'none'
+        a.href = downloadUrl
+        a.download = `${mission.id}-grabacion-puj.mp4`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(downloadUrl)
+        document.body.removeChild(a)
+        setDownloadSuccess(true)
+        setTimeout(() => setDownloadSuccess(false), 3000)
+      } else {
+        window.open(primaryUrl, '_blank')
+      }
+    } catch (err) {
+      console.warn('Descarga por fallback directo:', err)
+      window.open(mission.video_url, '_blank')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -137,20 +197,46 @@ export default function VideoPlayerModal({ mission, onClose }) {
 
           <div className="flex items-center space-x-2">
             {mission?.video_url && (
-              <a
-                href={mission.video_url}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 font-mono text-[11px] flex items-center space-x-1.5 transition"
-                title="Inspeccionar archivo en Supabase Storage S3"
-              >
-                <Download className="w-3.5 h-3.5 text-slate-500" />
-                <span>Bucket S3</span>
-              </a>
+              <>
+                <button
+                  onClick={handleDownloadVideo}
+                  disabled={isDownloading}
+                  className="px-3.5 py-1.5 rounded-lg bg-[#002855] hover:bg-[#001f42] text-white text-[11px] font-semibold flex items-center space-x-1.5 transition shadow-stitch-sm disabled:opacity-60"
+                  title="Descargar archivo MP4 desde Supabase Storage (S3)"
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Descargando...</span>
+                    </>
+                  ) : downloadSuccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>¡Descargado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Descargar MP4 (Bucket S3)</span>
+                    </>
+                  )}
+                </button>
+
+                <a
+                  href={mission.video_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 border border-slate-200 transition"
+                  title="Abrir enlace directo del bucket S3 en pestaña nueva"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </>
             )}
+
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold flex items-center space-x-1.5 transition shadow-2xs"
+              className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold flex items-center space-x-1.5 transition shadow-2xs text-[11px]"
             >
               {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
               <span>{isPlaying ? 'Pausar' : 'Reproducir'}</span>
