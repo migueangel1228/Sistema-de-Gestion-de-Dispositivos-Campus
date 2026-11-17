@@ -27,7 +27,7 @@ function MainLayout() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       {/* Top Navigation Bar */}
-      <Navbar />
+      <Navbar onNavigate={setCurrentTab} />
 
       {/* Main Container */}
       <div className="flex-1 flex overflow-hidden">

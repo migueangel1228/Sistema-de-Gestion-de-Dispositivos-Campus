@@ -134,7 +134,7 @@ export const COMPLIANCE_ITEMS = [
     standard: 'RR-06 / RF-21',
     category: 'RF-21: Mapa Campus',
     status: 'Cumplido',
-    description: 'Grafica sobre el mapa de Leaflet del Campus PUJ Cali (3.34°N, 76.53°W) la posición geográfica, geocercas, puntos de encuentro y vector de ruta de los dispositivos "En servicio".'
+    description: 'Grafica sobre el mapa de Leaflet del Campus PUJ Cali (3.3475°N, -76.5325°W) la posición geográfica, geocercas, puntos de encuentro y vector de ruta de los dispositivos "En servicio".'
   },
 
   // 8. RF-22 (Total: 2 subrequisitos)
@@ -198,7 +198,7 @@ export default function ComplianceModal({ onClose, onSelectRequirement }) {
   const categories = ['ALL', ...Array.from(new Set(COMPLIANCE_ITEMS.map(i => i.category)))]
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white border border-slate-200/90 rounded-2xl max-w-4xl w-full p-6 shadow-stitch-dropdown space-y-4 max-h-[90vh] flex flex-col text-slate-900">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">

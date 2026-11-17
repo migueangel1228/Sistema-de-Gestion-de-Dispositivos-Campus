@@ -15,11 +15,54 @@ export function AppProvider({ children }) {
   // 1. Estado de Dispositivos (RF-04, RF-05, RF-07, RR-09)
   const [devices, setDevices] = useState(() => {
     const saved = localStorage.getItem('puj_devices')
-    return saved ? JSON.parse(saved) : INITIAL_DEVICES
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        // Migrar dispositivos a la base de carga oficial calibrada en la cancha / zona verde
+        return parsed.map(d => {
+          if (d.status === 'Disponible' || d.status === 'En carga') {
+            return {
+              ...d,
+              latitude: 3.345846,
+              longitude: -76.532882
+            }
+          }
+          return d
+        })
+      } catch (e) {}
+    }
+    return INITIAL_DEVICES
   })
 
-  // 2. Puntos de Encuentro (RF-11, RR-06)
-  const [meetingPoints, setMeetingPoints] = useState(CAMPUS_MEETING_POINTS)
+  // 2. Puntos de Encuentro Calibrados Oficiales (RF-11, RR-06)
+  const [meetingPoints, setMeetingPoints] = useState(() => {
+    const saved = localStorage.getItem('puj_meeting_points_v3')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        // Si ya tiene los nuevos edificios, usar los guardados
+        if (parsed.length >= 12) return parsed
+      } catch (e) {}
+    }
+    localStorage.setItem('puj_meeting_points_v3', JSON.stringify(CAMPUS_MEETING_POINTS))
+    return CAMPUS_MEETING_POINTS
+  })
+
+  // 2.1 Centro y Radio de Geocerca del Campus
+  const [campusCenter, setCampusCenter] = useState(() => {
+    const saved = localStorage.getItem('puj_campus_center_v3')
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch (e) {}
+    }
+    return [3.347200, -76.532300]
+  })
+
+  const [campusRadius, setCampusRadius] = useState(() => {
+    const saved = localStorage.getItem('puj_campus_radius')
+    return saved ? parseInt(saved, 10) : 480
+  })
 
   // 3. Reservas (RF-08, RF-09, RF-10)
   const [reservations, setReservations] = useState(() => {
@@ -30,7 +73,22 @@ export function AppProvider({ children }) {
   // 4. Misiones Activas (RF-14, RF-20, RF-22)
   const [missions, setMissions] = useState(() => {
     const saved = localStorage.getItem('puj_missions')
-    return saved ? JSON.parse(saved) : []
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        return parsed.map(m => {
+          if (m.current_lat && parseFloat(m.current_lat) < 3.344) {
+            return {
+              ...m,
+              current_lat: 3.347500,
+              current_lng: -76.532500
+            }
+          }
+          return m
+        })
+      } catch (e) {}
+    }
+    return []
   })
 
   // 5. Bitácora de Auditoría Inmutable (RF-28, RNF-13)
@@ -60,6 +118,9 @@ export function AppProvider({ children }) {
   // Modal de Entrega OTP activo
   const [activeHandoverModal, setActiveHandoverModal] = useState(null)
 
+  // Modo Calibración / Debug de Ubicaciones en el Mapa
+  const [isDebugMode, setIsDebugMode] = useState(false)
+
   // Guardar en localStorage
   useEffect(() => {
     localStorage.setItem('puj_devices', JSON.stringify(devices))
@@ -80,6 +141,18 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('puj_maintenance_orders', JSON.stringify(maintenanceOrders))
   }, [maintenanceOrders])
+
+  useEffect(() => {
+    localStorage.setItem('puj_meeting_points_v3', JSON.stringify(meetingPoints))
+  }, [meetingPoints])
+
+  useEffect(() => {
+    localStorage.setItem('puj_campus_center_v3', JSON.stringify(campusCenter))
+  }, [campusCenter])
+
+  useEffect(() => {
+    localStorage.setItem('puj_campus_radius', campusRadius.toString())
+  }, [campusRadius])
 
   // Carga inicial y sincronización con Supabase Cloud
   useEffect(() => {
@@ -296,8 +369,8 @@ export function AppProvider({ children }) {
       max_payload_kg: payload,
       battery_level: 100,
       status: 'Disponible', // RF-04.1: inicializado en Disponible
-      latitude: 3.342500,
-      longitude: -76.530700,
+      latitude: 3.345846,
+      longitude: -76.532882,
       max_speed_kmh: parseInt(deviceData.max_speed_kmh || (deviceData.type === 'UAV' ? 35 : 15)),
       max_altitude_m: parseInt(deviceData.max_altitude_m || (deviceData.type === 'UAV' ? 60 : 0)),
       camera_resolution: deviceData.camera_resolution || '1080p',
@@ -682,11 +755,62 @@ export function AppProvider({ children }) {
     return { success: true }
   }
 
+  // =========================================================================
+  // CALIBRACIÓN Y MODO DEBUG DE UBICACIONES DEL MAPA
+  // =========================================================================
+  const updateMeetingPointLocation = (pointId, newLat, newLng) => {
+    const lat = parseFloat(newLat)
+    const lng = parseFloat(newLng)
+    if (isNaN(lat) || isNaN(lng)) return { success: false, error: 'Coordenadas numéricas inválidas.' }
+
+    setMeetingPoints(prev =>
+      prev.map(p => (p.id === pointId ? { ...p, latitude: lat, longitude: lng } : p))
+    )
+
+    const updatedPoint = meetingPoints.find(p => p.id === pointId)
+    // Si se mueve la estación de carga principal, reubicar los dispositivos disponibles
+    if (updatedPoint?.is_charging_station) {
+      setDevices(prev =>
+        prev.map(d =>
+          d.status === 'Disponible' || d.status === 'En carga'
+            ? { ...d, latitude: lat, longitude: lng }
+            : d
+        )
+      )
+    }
+
+    addAuditLog(
+      'CALIBRACION_MANUAL_UBICACION',
+      `Ubicación de "${updatedPoint?.name || pointId}" ajustada a [${lat.toFixed(6)}, ${lng.toFixed(6)}].`
+    )
+    return { success: true }
+  }
+
+  const resetMeetingPointsToDefault = () => {
+    setMeetingPoints(CAMPUS_MEETING_POINTS)
+    setCampusCenter([3.347200, -76.532300])
+    setCampusRadius(480)
+    localStorage.removeItem('puj_meeting_points_v3')
+    localStorage.removeItem('puj_campus_center_v3')
+    localStorage.removeItem('puj_campus_radius')
+    addAuditLog('CALIBRACION_RESTABLECIDA', 'Ubicaciones de puntos de encuentro restablecidas a valores iniciales oficiales.')
+    return { success: true }
+  }
+
   return (
     <AppContext.Provider
       value={{
         devices,
         meetingPoints,
+        setMeetingPoints,
+        campusCenter,
+        setCampusCenter,
+        campusRadius,
+        setCampusRadius,
+        updateMeetingPointLocation,
+        resetMeetingPointsToDefault,
+        isDebugMode,
+        setIsDebugMode,
         reservations,
         missions,
         auditLogs,

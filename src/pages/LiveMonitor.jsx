@@ -17,13 +17,14 @@ import {
   Radio,
   MapPin,
   BatteryCharging,
-  Target
+  Target,
+  Wrench
 } from 'lucide-react'
 import { DroneMinimalIcon, RoverMinimalIcon, LivePulseDot } from '../components/MinimalLogos'
 
 export default function LiveMonitor({ onOpenHandover, onOpenVideo }) {
   const { currentUser } = useAuth()
-  const { missions, devices, alerts, resolveAlert } = useApp()
+  const { missions, devices, alerts, resolveAlert, isDebugMode, setIsDebugMode } = useApp()
   const [selectedMissionId, setSelectedMissionId] = useState(null)
 
   const activeMissions = missions.filter(
@@ -54,8 +55,21 @@ export default function LiveMonitor({ onOpenHandover, onOpenVideo }) {
           </p>
         </div>
 
-        {/* Status Badge */}
-        <div className="flex items-center space-x-2">
+        {/* Status Badge & Debug Toggle */}
+        <div className="flex items-center space-x-2.5">
+          <button
+            onClick={() => setIsDebugMode(!isDebugMode)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold shadow-stitch-sm transition flex items-center space-x-2 border ${
+              isDebugMode
+                ? 'bg-amber-600 border-amber-700 text-white shadow-amber-500/25 ring-2 ring-amber-400'
+                : 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-stitch-sm'
+            }`}
+            title="Activar calibración para arrastrar edificios y estaciones en el mapa"
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>{isDebugMode ? 'Calibración: ACTIVA' : 'Calibrar Ubicaciones (Debug)'}</span>
+          </button>
+
           <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200/90 text-xs text-slate-700 font-mono shadow-stitch-sm flex items-center space-x-2">
             <LivePulseDot status={activeMissions.length > 0 ? "transit" : "neutral"} size="xs" />
             <span className="font-semibold">{activeMissions.length} Misión(es) Activa(s)</span>
@@ -63,11 +77,29 @@ export default function LiveMonitor({ onOpenHandover, onOpenVideo }) {
         </div>
       </div>
 
+      {/* Banner Informativo cuando Debug está activo */}
+      {isDebugMode && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-2.5 text-xs text-amber-950 flex items-center justify-between shadow-stitch-sm">
+          <div className="flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+            <span>
+              <strong>Modo Calibración Activo:</strong> Puedes <strong>arrastrar los marcadores con el mouse</strong> directamente sobre el mapa, o seleccionar un edificio en el panel flotante inferior y hacer clic sobre el mapa para ubicarlo.
+            </span>
+          </div>
+          <button
+            onClick={() => setIsDebugMode(false)}
+            className="text-amber-800 hover:text-amber-950 font-bold underline text-[11px] shrink-0 ml-3"
+          >
+            Finalizar Calibración
+          </button>
+        </div>
+      )}
+
       {/* Main Grid: Map (Left) + Telemetry & Controls (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-0">
         {/* Left: Interactive Leaflet Map (RF-21) */}
         <div className="lg:col-span-8 flex flex-col h-full space-y-3 min-h-[420px]">
-          <div className="flex-1 rounded-2xl overflow-hidden border border-slate-200/90 shadow-stitch-card relative bg-white">
+          <div className="flex-1 rounded-2xl overflow-hidden border border-slate-200/90 shadow-stitch-card relative z-0 isolate bg-white">
             <MapView
               onOpenHandover={onOpenHandover}
               onOpenVideo={onOpenVideo}
@@ -202,13 +234,13 @@ export default function LiveMonitor({ onOpenHandover, onOpenVideo }) {
                 <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
                   <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">Latitud GPS</span>
                   <span className="font-mono font-bold text-slate-900">
-                    {selectedMission.current_lat ? selectedMission.current_lat.toFixed(6) : '3.342150'}°N
+                    {selectedMission.current_lat ? Number(selectedMission.current_lat).toFixed(6) : '3.347500'}°N
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
                   <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">Longitud GPS</span>
                   <span className="font-mono font-bold text-slate-900">
-                    {selectedMission.current_lng ? selectedMission.current_lng.toFixed(6) : '-76.530200'}°W
+                    {selectedMission.current_lng ? Number(selectedMission.current_lng).toFixed(6) : '-76.532500'}°W
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
@@ -225,6 +257,27 @@ export default function LiveMonitor({ onOpenHandover, onOpenVideo }) {
                   </span>
                 </div>
               </div>
+
+              {/* Botón de Validación de Entrega directo desde Telemetría */}
+              {selectedMission.status !== 'Entregado' && (
+                <div className="pt-2 border-t border-slate-100 flex items-center space-x-2">
+                  <button
+                    onClick={() => onOpenHandover && onOpenHandover(selectedMission)}
+                    className="flex-1 py-2 px-3 bg-[#002855] hover:bg-[#001f42] text-white font-semibold text-xs rounded-xl transition shadow-stitch-sm flex items-center justify-center space-x-1.5"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Validar Entrega OTP (RF-23)</span>
+                  </button>
+                  <button
+                    onClick={() => onOpenVideo && onOpenVideo(selectedMission)}
+                    className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition border border-slate-200 flex items-center space-x-1"
+                    title="Ver Streaming de Cámara"
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Cámara</span>
+                  </button>
+                </div>
+              )}
 
               {/* Contingency battery note (RF-32) */}
               <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 flex items-start space-x-2">

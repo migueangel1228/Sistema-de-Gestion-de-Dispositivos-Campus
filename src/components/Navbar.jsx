@@ -12,15 +12,16 @@ import {
   ChevronDown,
   Truck,
   Check,
-  Database
+  Database,
+  Wrench
 } from 'lucide-react'
 import { PujAeroEmblem, LivePulseDot } from './MinimalLogos'
 import ComplianceModal from './ComplianceModal'
 import { isSupabaseConfigured } from '../services/supabaseClient'
 
-export default function Navbar() {
+export default function Navbar({ onNavigate }) {
   const { currentUser, logout, inactivityTimer, quickLoginAs } = useAuth()
-  const { weather, alerts } = useApp()
+  const { weather, alerts, isDebugMode, setIsDebugMode } = useApp()
   const [showRoleMenu, setShowRoleMenu] = useState(false)
   const [showComplianceModal, setShowComplianceModal] = useState(false)
 
@@ -106,6 +107,24 @@ export default function Navbar() {
               <span>{activeAlertsCount} Alerta{activeAlertsCount > 1 ? 's' : ''}</span>
             </div>
           )}
+
+          {/* Botón Calibrador / Debug del Mapa */}
+          <button
+            onClick={() => {
+              setIsDebugMode(!isDebugMode)
+              onNavigate && onNavigate('monitor')
+            }}
+            title="Abrir el mapa en Modo Calibración para arrastrar o mover edificios y estaciones"
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-stitch-sm border ${
+              isDebugMode
+                ? 'bg-amber-600 border-amber-700 text-white shadow-amber-500/25 ring-2 ring-amber-400'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+            }`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Calibrar Mapa</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-amber-200/80 text-amber-950 font-bold">Debug</span>
+          </button>
 
           {/* Compliance Modal Button (Audit 16 Subrequisitos SRS) */}
           <button

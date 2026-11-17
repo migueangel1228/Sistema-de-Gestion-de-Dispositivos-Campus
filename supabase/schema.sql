@@ -32,8 +32,8 @@ create table if not exists public.devices (
   max_payload_kg numeric(5,2) not null, -- Dron <= 2.0, Robot <= 10.0
   battery_level integer check (battery_level between 0 and 100) default 100,
   status text check (status in ('Disponible', 'En servicio', 'En carga', 'En mantenimiento', 'Fuera de servicio')) default 'Disponible',
-  latitude numeric(10, 6) default 3.342150, -- Coordenada base PUJ Cali
-  longitude numeric(10, 6) default -76.530200,
+  latitude numeric(10, 6) default 3.348634, -- Coordenada base Campus PUJ Cali
+  longitude numeric(10, 6) default -76.531716,
   max_speed_kmh integer default 25,
   max_altitude_m integer default 60,
   camera_resolution text default '1080p',
@@ -207,22 +207,26 @@ on conflict (id) do nothing;
 
 -- 4.2 Puntos de Encuentro Oficiales PUJ Cali (RF-11, RR-06)
 insert into public.meeting_points (name, description, latitude, longitude, is_charging_station) values
-('Estación Central de Carga (Docking)', 'Base de operaciones y hangares de drones/robots', 3.342500, -76.530700, true),
-('Edificio Samán (Ingeniería)', 'Plazoleta central y aulas de laboratorios', 3.342150, -76.530200, false),
-('Auditorio Alfonso Borrero Cabal', 'Sótano 1 y explanada principal de eventos', 3.342800, -76.531200, false),
-('Biblioteca General PUJ Cali', 'Entrada principal y plazoleta de estudio', 3.341400, -76.530900, false),
-('Edificio Guayacanes', 'Aulas de postgrados y decanaturas', 3.343500, -76.529800, false),
-('Cafetería Central La Troja', 'Zona de restaurantes y cafetería abierta', 3.341800, -76.531600, false),
-('Laboratorios de Diseño y Robótica', 'Edificio Almendros y talleres de prototipado', 3.340900, -76.530000, false),
-('Polideportivo y Canchas', 'Canchas múltiples y complejo deportivo', 3.343900, -76.531800, false)
+('Estación Central de Carga (Docking)', 'Base de operaciones y hangares de drones/robots en zona deportiva', 3.345846, -76.532882, true),
+('Edificio Samán (Ingeniería)', 'Plazoleta central y aulas de laboratorios', 3.346730, -76.532676, false),
+('Auditorio Alfonso Borrero Cabal', 'Auditorio Javeriano y explanada principal', 3.348446, -76.531342, false),
+('Biblioteca General PUJ Cali', 'Entrada principal y plazoleta de estudio', 3.347710, -76.532137, false),
+('Edificio Guayacanes', 'Ciencias Económicas y Administrativas', 3.348811, -76.532196, false),
+('Cafetería Central La Troja', 'Zona gastronómica y plazoleta de alimentos', 3.348484, -76.531951, false),
+('Laboratorios de Diseño y Robótica', 'Edificio Almendros y talleres de manufactura', 3.346501, -76.532064, false),
+('Polideportivo y Canchas', 'Acceso Deportivo Loyola sobre Calle 17A', 3.345280, -76.531801, false),
+('Cedro Rosado', 'Edificio Cedro Rosado - Aulas y laboratorios', 3.345798, -76.533713, false),
+('Edificio El Lago', 'Decanaturas y aulas junto al lago', 3.348236, -76.532806, false),
+('Edificio Administrativo', 'Oficinas institucionales y servicios universitarios', 3.347395, -76.532356, false),
+('Edificio Las Palmas', 'Campus Nova y educación continua', 3.348970, -76.531533, false)
 on conflict (name) do nothing;
 
 -- 4.3 Flota Inicial de 6 Dispositivos (3 UGV + 3 UAV - RR-09)
 insert into public.devices (code, type, model, max_payload_kg, battery_level, status, latitude, longitude, max_speed_kmh, max_altitude_m, camera_resolution) values
-('UGV-01', 'UGV', 'Scout Rover X4 (Terrestre)', 8.00, 95, 'Disponible', 3.342500, -76.530700, 15, 0, '1080p'),
-('UGV-02', 'UGV', 'Titan Hauler Pro (Terrestre)', 10.00, 88, 'Disponible', 3.342500, -76.530700, 12, 0, '1080p'),
-('UGV-03', 'UGV', 'Carrier Lite (Terrestre)', 5.00, 75, 'Disponible', 3.342500, -76.530700, 18, 0, '720p'),
-('UAV-01', 'UAV', 'SkyCourier Hexacopter (Dron)', 1.80, 100, 'Disponible', 3.342500, -76.530700, 35, 60, '4K'),
-('UAV-02', 'UAV', 'Falcon Express Quad (Dron)', 2.00, 92, 'Disponible', 3.342500, -76.530700, 40, 80, '1080p'),
-('UAV-03', 'UAV', 'Aerocam Surveyor (Dron)', 1.20, 85, 'Disponible', 3.342500, -76.530700, 30, 120, '4K')
+('UGV-01', 'UGV', 'Scout Rover X4 (Terrestre)', 8.00, 95, 'Disponible', 3.345846, -76.532882, 15, 0, '1080p'),
+('UGV-02', 'UGV', 'Titan Hauler Pro (Terrestre)', 10.00, 88, 'Disponible', 3.345846, -76.532882, 12, 0, '1080p'),
+('UGV-03', 'UGV', 'Carrier Lite (Terrestre)', 5.00, 75, 'Disponible', 3.345846, -76.532882, 18, 0, '720p'),
+('UAV-01', 'UAV', 'SkyCourier Hexacopter (Dron)', 1.80, 100, 'Disponible', 3.345846, -76.532882, 35, 60, '4K'),
+('UAV-02', 'UAV', 'Falcon Express Quad (Dron)', 2.00, 92, 'Disponible', 3.345846, -76.532882, 40, 80, '1080p'),
+('UAV-03', 'UAV', 'Aerocam Surveyor (Dron)', 1.20, 85, 'Disponible', 3.345846, -76.532882, 30, 120, '4K')
 on conflict (code) do nothing;

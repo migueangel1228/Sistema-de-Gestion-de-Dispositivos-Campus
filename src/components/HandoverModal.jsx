@@ -48,7 +48,7 @@ export default function HandoverModal({ mission, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white border border-slate-200/90 rounded-2xl max-w-lg w-full p-6 shadow-stitch-dropdown relative space-y-5">
         {/* Close Button */}
         <button

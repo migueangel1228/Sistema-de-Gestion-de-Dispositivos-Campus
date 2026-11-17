@@ -53,10 +53,12 @@ export default function VideoPlayerModal({ mission, onClose }) {
       ctx.stroke()
 
       // HUD Text Info
+      const latDisplay = (mission?.current_lat ? Number(mission.current_lat) : 3.347500).toFixed(6)
+      const lngDisplay = (mission?.current_lng ? Number(mission.current_lng) : -76.532500).toFixed(6)
       ctx.fillStyle = '#38bdf8'
       ctx.font = '12px "JetBrains Mono", monospace'
       ctx.fillText(`CAM: PUJ-CALI-${mission?.device_code || 'CAM-01'} [REC ●]`, 20, 30)
-      ctx.fillText(`GPS: 3.342150°N  -76.530200°W  HDOP 0.8`, 20, 50)
+      ctx.fillText(`GPS: ${latDisplay}°N  ${lngDisplay}°W  HDOP 0.8`, 20, 50)
       ctx.fillText(`RESOLUCION: 1080p @ 30fps (H.264 / Supabase Storage)`, 20, 70)
 
       ctx.fillStyle = '#fbbf24'
@@ -85,7 +87,7 @@ export default function VideoPlayerModal({ mission, onClose }) {
   if (!mission) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white border border-slate-200/90 rounded-2xl max-w-2xl w-full p-6 shadow-stitch-dropdown space-y-4 text-slate-900">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">

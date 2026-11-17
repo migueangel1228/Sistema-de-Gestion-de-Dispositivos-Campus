@@ -138,7 +138,7 @@ export default function Maintenance() {
 
       {/* Close Maintenance Modal */}
       {showCloseModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200/90 rounded-2xl max-w-md w-full p-6 shadow-stitch-dropdown space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
