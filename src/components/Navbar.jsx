@@ -11,10 +11,12 @@ import {
   AlertTriangle,
   ChevronDown,
   Truck,
-  Check
+  Check,
+  Database
 } from 'lucide-react'
 import { PujAeroEmblem, LivePulseDot } from './MinimalLogos'
 import ComplianceModal from './ComplianceModal'
+import { isSupabaseConfigured } from '../services/supabaseClient'
 
 export default function Navbar() {
   const { currentUser, logout, inactivityTimer, quickLoginAs } = useAuth()
@@ -115,6 +117,18 @@ export default function Navbar() {
             <span className="hidden sm:inline">SRS Audit</span>
             <span className="font-mono text-[10px] bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded font-bold">16/16</span>
           </button>
+
+          {/* Indicador de conexión Supabase Cloud & S3 Bucket */}
+          {isSupabaseConfigured && (
+            <div
+              title="PostgreSQL & S3 Storage Bucket 'drone-videos' activos en Supabase Cloud (us-west-2)"
+              className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/90 text-emerald-800 text-xs font-medium"
+            >
+              <Database className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden xl:inline">Supabase</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+          )}
 
           {/* Inactivity countdown badge (RNF-01: 15 min timeout) */}
           <div

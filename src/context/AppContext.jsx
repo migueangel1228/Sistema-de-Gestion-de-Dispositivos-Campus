@@ -7,6 +7,7 @@ import {
 } from '../services/mockData'
 import { generateRouteWaypoints, evaluateEnergyFeasibility, getDistanceMeters } from '../utils/telemetrySimulator'
 import { createHandoverOtp } from '../utils/cryptoOtp'
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient'
 
 const AppContext = createContext(null)
 
@@ -18,7 +19,7 @@ export function AppProvider({ children }) {
   })
 
   // 2. Puntos de Encuentro (RF-11, RR-06)
-  const [meetingPoints] = useState(CAMPUS_MEETING_POINTS)
+  const [meetingPoints, setMeetingPoints] = useState(CAMPUS_MEETING_POINTS)
 
   // 3. Reservas (RF-08, RF-09, RF-10)
   const [reservations, setReservations] = useState(() => {
@@ -80,6 +81,33 @@ export function AppProvider({ children }) {
     localStorage.setItem('puj_maintenance_orders', JSON.stringify(maintenanceOrders))
   }, [maintenanceOrders])
 
+  // Carga inicial y sincronización con Supabase Cloud
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return
+    async function loadCloudData() {
+      try {
+        const [devRes, mpRes, resRes, misRes, audRes, manRes] = await Promise.all([
+          supabase.from('devices').select('*'),
+          supabase.from('meeting_points').select('*'),
+          supabase.from('reservations').select('*').order('created_at', { ascending: false }),
+          supabase.from('missions').select('*').order('started_at', { ascending: false }),
+          supabase.from('audit_logs').select('*').order('timestamp_utc', { ascending: false }).limit(50),
+          supabase.from('maintenance_orders').select('*').order('created_at', { ascending: false })
+        ])
+
+        if (devRes.data && devRes.data.length > 0) setDevices(devRes.data)
+        if (mpRes.data && mpRes.data.length > 0) setMeetingPoints(mpRes.data)
+        if (resRes.data && resRes.data.length > 0) setReservations(resRes.data)
+        if (misRes.data && misRes.data.length > 0) setMissions(misRes.data)
+        if (audRes.data && audRes.data.length > 0) setAuditLogs(audRes.data)
+        if (manRes.data && manRes.data.length > 0) setMaintenanceOrders(manRes.data)
+      } catch (err) {
+        console.warn('[Supabase Sync] Error al sincronizar:', err)
+      }
+    }
+    loadCloudData()
+  }, [])
+
   // Helper para registrar en bitácora inmutable (RF-28, RNF-13)
   const addAuditLog = (action, details, userEmail = 'operador@puj.edu.co') => {
     const newLog = {
@@ -91,6 +119,17 @@ export function AppProvider({ children }) {
       timestamp_utc: new Date().toISOString()
     }
     setAuditLogs(prev => [newLog, ...prev])
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('audit_logs').insert([{
+        user_email: userEmail,
+        action,
+        details,
+        ip_address: newLog.ip_address,
+        timestamp_utc: newLog.timestamp_utc
+      }]).then(() => {}).catch(err => console.warn('[Supabase Audit Log]:', err))
+    }
+
     return newLog
   }
 
@@ -448,7 +487,7 @@ export function AppProvider({ children }) {
       current_battery: chosenDevice.battery_level,
       started_at: new Date().toISOString(),
       status: 'En camino',
-      video_url: 'https://supabase.puj.edu.co/storage/v1/object/public/mission-videos/' + missionId + '.mp4',
+      video_url: `${(import.meta.env.VITE_SUPABASE_URL || 'https://mnjlidnbhtcrbtnwsqof.supabase.co')}/storage/v1/object/public/drone-videos/${missionId}.mp4`,
       weatherNote: weatherReason
     }
 

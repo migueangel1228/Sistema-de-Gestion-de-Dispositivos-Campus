@@ -134,6 +134,18 @@ export default function VideoPlayerModal({ mission, onClose }) {
           </div>
 
           <div className="flex items-center space-x-2">
+            {mission?.video_url && (
+              <a
+                href={mission.video_url}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 font-mono text-[11px] flex items-center space-x-1.5 transition"
+                title="Inspeccionar archivo en Supabase Storage S3"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>Bucket S3</span>
+              </a>
+            )}
             <button
               onClick={() => setIsPlaying(!isPlaying)}
               className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold flex items-center space-x-1.5 transition shadow-2xs"
