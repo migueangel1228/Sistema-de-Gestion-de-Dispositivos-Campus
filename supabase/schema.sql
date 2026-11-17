@@ -1,15 +1,19 @@
 -- =========================================================================
 -- SISTEMA CENTRALIZADO DE GESTIÓN DE ROBOTS Y DRONES (CAMPUS PUJ CALI)
--- Script de Creación y Poblamiento de Base de Datos PostgreSQL / Supabase
--- Estándar ISO/IEC/IEEE 29148:2018 | Entregable 3 Demo
+-- Script de Creación, Seguridad (RLS) y Poblamiento de Base de Datos PostgreSQL / Supabase
+-- Estándar ISO/IEC/IEEE 29148:2018 & RAC 100 | Entregable 3 Demo
 -- =========================================================================
 
 -- 0. Habilitar extensión UUID
 create extension if not exists "uuid-ossp";
 
--- 1. Tabla de Perfiles de Usuario / Roles (RBAC: RF-01, RF-03, RNF-07)
+-- =========================================================================
+-- 1. TABLAS PRINCIPALES DEL SISTEMA
+-- =========================================================================
+
+-- 1.1 Tabla de Perfiles de Usuario / Roles (RBAC: RF-01, RF-03, RNF-07)
 create table if not exists public.profiles (
-  id uuid references auth.users on delete cascade primary key,
+  id text primary key, -- ej. usr-001 o auth.users uuid
   email text unique not null,
   full_name text not null,
   role text check (role in ('AdminPrincipal', 'AdminOperativo', 'OperadorSeguridad')) not null,
@@ -19,7 +23,7 @@ create table if not exists public.profiles (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 2. Tabla de Dispositivos (UGV y UAV: RF-04, RF-05, RF-07, RR-09)
+-- 1.2 Tabla de Dispositivos (UGV y UAV: RF-04, RF-05, RF-07, RR-09)
 create table if not exists public.devices (
   id uuid default uuid_generate_v4() primary key,
   code text unique not null, -- ej. UGV-01, UAV-01
@@ -37,7 +41,7 @@ create table if not exists public.devices (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. Tabla de Puntos de Encuentro (Campus PUJ Cali: RF-11, RR-06)
+-- 1.3 Tabla de Puntos de Encuentro (Campus PUJ Cali: RF-11, RR-06)
 create table if not exists public.meeting_points (
   id uuid default uuid_generate_v4() primary key,
   name text unique not null,
@@ -47,7 +51,7 @@ create table if not exists public.meeting_points (
   is_charging_station boolean default false
 );
 
--- 4. Tabla de Reservas y Solicitudes (RF-08, RF-09, RF-10)
+-- 1.4 Tabla de Reservas y Solicitudes (RF-08, RF-09, RF-10)
 create table if not exists public.reservations (
   id uuid default uuid_generate_v4() primary key,
   requester_id text not null, -- Identificador institucional SIU
@@ -64,7 +68,7 @@ create table if not exists public.reservations (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. Tabla de Misiones y Despachos activos (RF-14, RF-20, RF-22, RF-23, RF-32)
+-- 1.5 Tabla de Misiones y Despachos activos (RF-14, RF-20, RF-22, RF-23, RF-32)
 create table if not exists public.missions (
   id uuid default uuid_generate_v4() primary key,
   reservation_id uuid references public.reservations(id) on delete cascade,
@@ -82,7 +86,7 @@ create table if not exists public.missions (
   status text check (status in ('En camino', 'En camino - bateria baja', 'Entregado', 'Abortado', 'En alerta')) default 'En camino'
 );
 
--- 6. Tabla de Bitácora Histórica e Inmutable de Auditoría (RF-28, RNF-13)
+-- 1.6 Tabla de Bitácora Histórica e Inmutable de Auditoría (RF-28, RNF-13)
 create table if not exists public.audit_logs (
   id uuid default uuid_generate_v4() primary key,
   user_email text,
@@ -92,7 +96,7 @@ create table if not exists public.audit_logs (
   timestamp_utc timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. Tabla de Órdenes de Mantenimiento (RF-33)
+-- 1.7 Tabla de Órdenes de Mantenimiento (RF-33)
 create table if not exists public.maintenance_orders (
   id uuid default uuid_generate_v4() primary key,
   device_id uuid references public.devices(id),
@@ -105,10 +109,82 @@ create table if not exists public.maintenance_orders (
 );
 
 -- =========================================================================
--- POBLAMIENTO INICIAL DE DATOS (SEED DATA - CAMPUS PUJ CALI)
+-- 2. POLÍTICAS DE SEGURIDAD ROW LEVEL SECURITY (RLS)
 -- =========================================================================
 
--- Puntos de Encuentro Oficiales PUJ Cali
+alter table public.profiles enable row level security;
+alter table public.devices enable row level security;
+alter table public.meeting_points enable row level security;
+alter table public.reservations enable row level security;
+alter table public.missions enable row level security;
+alter table public.audit_logs enable row level security;
+alter table public.maintenance_orders enable row level security;
+
+-- Acceso de lectura pública (anon y authenticated)
+create policy "Permitir lectura publica a profiles" on public.profiles for select to public using (true);
+create policy "Permitir lectura publica a devices" on public.devices for select to public using (true);
+create policy "Permitir lectura publica a meeting_points" on public.meeting_points for select to public using (true);
+create policy "Permitir lectura publica a reservations" on public.reservations for select to public using (true);
+create policy "Permitir lectura publica a missions" on public.missions for select to public using (true);
+create policy "Permitir lectura publica a audit_logs" on public.audit_logs for select to public using (true);
+create policy "Permitir lectura publica a maintenance_orders" on public.maintenance_orders for select to public using (true);
+
+-- Acceso de escritura y actualización para la consola operativa
+create policy "Permitir operaciones sobre profiles" on public.profiles for all to public using (true) with check (true);
+create policy "Permitir operaciones sobre devices" on public.devices for all to public using (true) with check (true);
+create policy "Permitir operaciones sobre meeting_points" on public.meeting_points for all to public using (true) with check (true);
+create policy "Permitir operaciones sobre reservations" on public.reservations for all to public using (true) with check (true);
+create policy "Permitir operaciones sobre missions" on public.missions for all to public using (true) with check (true);
+create policy "Permitir insercion inmutable audit_logs" on public.audit_logs for insert to public with check (true);
+create policy "Permitir operaciones sobre maintenance_orders" on public.maintenance_orders for all to public using (true) with check (true);
+
+-- =========================================================================
+-- 3. BUCKET DE ALMACENAMIENTO S3 PARA VIDEOS DE DRONES (RF-27.2, RNF-14)
+-- =========================================================================
+
+-- Crear el bucket de almacenamiento si no existe
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'drone-videos',
+  'drone-videos',
+  true,
+  104857600, -- 100 MB máximo por streaming/grabación
+  array['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg', 'image/png']
+)
+on conflict (id) do update set
+  public = true,
+  file_size_limit = 104857600,
+  allowed_mime_types = array['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg', 'image/png'];
+
+-- Políticas de acceso a storage.objects para el bucket drone-videos
+create policy "Public Access Drone Videos"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'drone-videos');
+
+create policy "Public Upload Drone Videos"
+  on storage.objects for insert
+  to public
+  with check (bucket_id = 'drone-videos');
+
+create policy "Public Update Drone Videos"
+  on storage.objects for update
+  to public
+  using (bucket_id = 'drone-videos')
+  with check (bucket_id = 'drone-videos');
+
+-- =========================================================================
+-- 4. POBLAMIENTO INICIAL DE DATOS (SEED DATA - CAMPUS PUJ CALI)
+-- =========================================================================
+
+-- 4.1 Perfiles Institucionales (RF-01, RF-03)
+insert into public.profiles (id, email, full_name, role, status) values
+('usr-001', 'admin@puj.edu.co', 'Dr. Fernando Echeverri (Admin Principal)', 'AdminPrincipal', 'Activa'),
+('usr-002', 'operativo@puj.edu.co', 'Ing. Carlos Mendoza (Admin Operativo)', 'AdminOperativo', 'Activa'),
+('usr-003', 'seguridad@puj.edu.co', 'Oficial Rómulo Rojas (Operador Seguridad)', 'OperadorSeguridad', 'Activa')
+on conflict (id) do nothing;
+
+-- 4.2 Puntos de Encuentro Oficiales PUJ Cali (RF-11, RR-06)
 insert into public.meeting_points (name, description, latitude, longitude, is_charging_station) values
 ('Estación Central de Carga (Docking)', 'Base de operaciones y hangares de drones/robots', 3.342500, -76.530700, true),
 ('Edificio Samán (Ingeniería)', 'Plazoleta central y aulas de laboratorios', 3.342150, -76.530200, false),
@@ -120,7 +196,7 @@ insert into public.meeting_points (name, description, latitude, longitude, is_ch
 ('Polideportivo y Canchas', 'Canchas múltiples y complejo deportivo', 3.343900, -76.531800, false)
 on conflict (name) do nothing;
 
--- Flota Inicial de 6 Dispositivos (3 UGV + 3 UAV - RR-09)
+-- 4.3 Flota Inicial de 6 Dispositivos (3 UGV + 3 UAV - RR-09)
 insert into public.devices (code, type, model, max_payload_kg, battery_level, status, latitude, longitude, max_speed_kmh, max_altitude_m, camera_resolution) values
 ('UGV-01', 'UGV', 'Scout Rover X4 (Terrestre)', 8.00, 95, 'Disponible', 3.342500, -76.530700, 15, 0, '1080p'),
 ('UGV-02', 'UGV', 'Titan Hauler Pro (Terrestre)', 10.00, 88, 'Disponible', 3.342500, -76.530700, 12, 0, '1080p'),
