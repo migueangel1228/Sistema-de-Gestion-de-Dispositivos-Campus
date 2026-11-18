@@ -1,0 +1,34 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  build:
+    name: Build & Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Production Build
+        run: npm run build
+
+      - name: Verify Build Artifacts
+        run: |
+          test -d dist || { echo "Build output 'dist' directory not found"; exit 1; }
+          test -f dist/index.html || { echo "dist/index.html missing"; exit 1; }
+          echo "Production build verified successfully!"

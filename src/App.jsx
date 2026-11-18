@@ -1,17 +1,17 @@
 import React, { useState } from 'react'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import { AppProvider, useApp } from './context/AppContext'
-import Navbar from './components/Navbar'
-import Sidebar from './components/Sidebar'
-import Dashboard from './pages/Dashboard'
-import LiveMonitor from './pages/LiveMonitor'
-import Inventory from './pages/Inventory'
-import Reservations from './pages/Reservations'
-import AuditLogs from './pages/AuditLogs'
-import Maintenance from './pages/Maintenance'
-import Login from './pages/Login'
-import HandoverModal from './components/HandoverModal'
-import VideoPlayerModal from './components/VideoPlayerModal'
+import { AuthProvider, useAuth } from '@/context'
+import { AppProvider, useApp } from '@/context'
+import { Navbar, Sidebar } from '@/components/layout'
+import { HandoverModal, VideoPlayerModal } from '@/components/modals'
+import {
+  Dashboard,
+  LiveMonitor,
+  Inventory,
+  Reservations,
+  AuditLogs,
+  Maintenance,
+  Login
+} from '@/pages'
 
 function MainLayout() {
   const { currentUser } = useAuth()
