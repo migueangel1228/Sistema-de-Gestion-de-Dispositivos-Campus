@@ -31,6 +31,7 @@ Esta carpeta centraliza todos los artefactos de ingeniería de software, arquite
 docs/
 ├── architecture/                     # Arquitectura de software y modelos estructurales
 │   ├── C4-Robots-Drones.drawio       # Modelo C4 (Contexto, Contenedores, Componentes)
+│   ├── Diagrama-Arquitectura.drawio  # Diagrama integral de arquitectura de software
 │   ├── Diagrama-Clases.drawio        # Diagrama de clases de dominio en draw.io
 │   ├── Diagrama-Contexto-Drones-Robots.png # Diagrama visual de contexto operacional
 │   └── DESIGN.md                     # Especificación completa del Design System (Google Stitch)

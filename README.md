@@ -65,6 +65,7 @@ docs/
 ├── README.md                          # Guía navegable de artefactos técnicos
 ├── architecture/                      # Modelado C4 y dominio
 │   ├── C4-Robots-Drones.drawio        # Arquitectura C4 (Contexto, Contenedor, Componentes)
+│   ├── Diagrama-Arquitectura.drawio   # Diagrama integral de arquitectura de software
 │   ├── Diagrama-Clases.drawio         # Diagrama de Clases UML del dominio
 │   ├── Diagrama-Contexto-Drones-Robots.png # Contexto del sistema y fronteras
 │   └── DESIGN.md                      # Design System Google Stitch (colores, tipografía)
