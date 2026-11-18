@@ -576,13 +576,13 @@ export default function MapView({ onSelectMission, onOpenHandover, onOpenVideo }
 
         {/* Dispositivos en el Mapa (RF-20, RF-21) */}
         {devices.map(device => {
-          const lat = parseFloat(device.latitude) || campusCenter[0]
-          const lng = parseFloat(device.longitude) || campusCenter[1]
-          const isMoving = device.status === 'En servicio'
-
           const activeMission = missions.find(
             m => m.device_id === device.id && (m.status === 'En camino' || m.status === 'En camino - bateria baja')
           )
+
+          const lat = (activeMission && activeMission.current_lat) ? parseFloat(activeMission.current_lat) : (parseFloat(device.latitude) || campusCenter[0])
+          const lng = (activeMission && activeMission.current_lng) ? parseFloat(activeMission.current_lng) : (parseFloat(device.longitude) || campusCenter[1])
+          const isMoving = device.status === 'En servicio' && Boolean(activeMission)
 
           return (
             <Marker

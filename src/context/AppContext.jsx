@@ -18,16 +18,21 @@ export function AppProvider({ children }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        // Migrar dispositivos a la base de carga oficial calibrada en la cancha / zona verde
+        // Sanitizar pesos según nuevo SRS (UAV <= 0.5kg, UGV <= 1.0kg) y calibrar ubicación
         return parsed.map(d => {
+          let maxP = parseFloat(d.max_payload_kg)
+          if (d.type === 'UGV' && (maxP > 1.0 || isNaN(maxP))) maxP = 1.0
+          if (d.type === 'UAV' && (maxP > 0.5 || isNaN(maxP))) maxP = 0.5
+
           if (d.status === 'Disponible' || d.status === 'En carga') {
             return {
               ...d,
+              max_payload_kg: maxP,
               latitude: 3.345846,
               longitude: -76.532882
             }
           }
-          return d
+          return { ...d, max_payload_kg: maxP }
         })
       } catch (e) {}
     }
@@ -67,7 +72,17 @@ export function AppProvider({ children }) {
   // 3. Reservas (RF-08, RF-09, RF-10)
   const [reservations, setReservations] = useState(() => {
     const saved = localStorage.getItem('puj_reservations')
-    return saved ? JSON.parse(saved) : INITIAL_RESERVATIONS
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        return parsed.map(r => {
+          let weight = parseFloat(r.payload_weight_kg)
+          if (weight > 1.0 || isNaN(weight)) weight = 0.8
+          return { ...r, payload_weight_kg: weight }
+        })
+      } catch (e) {}
+    }
+    return INITIAL_RESERVATIONS
   })
 
   // 4. Misiones Activas (RF-14, RF-20, RF-22)
@@ -76,19 +91,48 @@ export function AppProvider({ children }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        return parsed.map(m => {
-          if (m.current_lat && parseFloat(m.current_lat) < 3.344) {
-            return {
-              ...m,
-              current_lat: 3.347500,
-              current_lng: -76.532500
+        if (parsed.length > 0) {
+          return parsed.map(m => {
+            if (m.current_lat && parseFloat(m.current_lat) < 3.344) {
+              return {
+                ...m,
+                current_lat: 3.347500,
+                current_lng: -76.532500
+              }
             }
-          }
-          return m
-        })
+            return m
+          })
+        }
       } catch (e) {}
     }
-    return []
+    // Misión inicial activa de demostración (UAV-01 en ruta Samán -> Biblioteca)
+    const origin = CAMPUS_MEETING_POINTS[0] // Samán
+    const dest = CAMPUS_MEETING_POINTS[2] // Biblioteca
+    const wps = generateRouteWaypoints(origin, dest, 15)
+    return [
+      {
+        id: 'mis-1001',
+        reservation_id: 'res-101',
+        device_id: 'dev-004',
+        device_code: 'UAV-01',
+        device_type: 'UAV',
+        origin_name: origin.name,
+        destination_name: dest.name,
+        destination_point_id: dest.id,
+        otp_pin: '394821',
+        otp_qr_code: 'https://puj-campus.edu.co/verify?otp=394821&mis=mis-1001',
+        otp_expires_at: new Date(Date.now() + 110 * 60000).toISOString(),
+        waypoints: wps,
+        currentStepIndex: 3,
+        current_lat: wps[3].lat,
+        current_lng: wps[3].lng,
+        current_battery: 94,
+        started_at: new Date(Date.now() - 3 * 60000).toISOString(),
+        status: 'En camino',
+        video_url: `${(import.meta.env.VITE_SUPABASE_URL || 'https://mnjlidnbhtcrbtnwsqof.supabase.co')}/storage/v1/object/public/drone-videos/default-mission.mp4`,
+        weatherNote: null
+      }
+    ]
   })
 
   // 5. Bitácora de Auditoría Inmutable (RF-28, RNF-13)
@@ -168,9 +212,24 @@ export function AppProvider({ children }) {
           supabase.from('maintenance_orders').select('*').order('created_at', { ascending: false })
         ])
 
-        if (devRes.data && devRes.data.length > 0) setDevices(devRes.data)
+        if (devRes.data && devRes.data.length > 0) {
+          const sanitizedDevs = devRes.data.map(d => {
+            let maxP = parseFloat(d.max_payload_kg)
+            if (d.type === 'UGV' && (maxP > 1.0 || isNaN(maxP))) maxP = 1.0
+            if (d.type === 'UAV' && (maxP > 0.5 || isNaN(maxP))) maxP = 0.5
+            return { ...d, max_payload_kg: maxP }
+          })
+          setDevices(sanitizedDevs)
+        }
         if (mpRes.data && mpRes.data.length > 0) setMeetingPoints(mpRes.data)
-        if (resRes.data && resRes.data.length > 0) setReservations(resRes.data)
+        if (resRes.data && resRes.data.length > 0) {
+          const sanitizedRes = resRes.data.map(r => {
+            let w = parseFloat(r.payload_weight_kg)
+            if (w > 1.0 || isNaN(w)) w = 0.8
+            return { ...r, payload_weight_kg: w }
+          })
+          setReservations(sanitizedRes)
+        }
         if (misRes.data && misRes.data.length > 0) setMissions(misRes.data)
         if (audRes.data && audRes.data.length > 0) setAuditLogs(audRes.data)
         if (manRes.data && manRes.data.length > 0) setMaintenanceOrders(manRes.data)
@@ -207,7 +266,7 @@ export function AppProvider({ children }) {
   }
 
   // =========================================================================
-  // LOOP DE TELEMETRÍA CADA 5 SEGUNDOS (RNF-03, RF-20, RF-21, RF-32, RF-34)
+  // LOOP DE TELEMETRÍA (RNF-03: <= 5s, actualizado a 2.5s para dinamismo, RF-20, RF-21, RF-32, RF-34)
   // =========================================================================
   useEffect(() => {
     const interval = setInterval(() => {
@@ -215,7 +274,9 @@ export function AppProvider({ children }) {
       setMissions(prevMissions => {
         if (!prevMissions.length) return prevMissions
 
-        return prevMissions.map(mission => {
+        const deviceUpdates = {}
+
+        const nextMissions = prevMissions.map(mission => {
           if (mission.status !== 'En camino' && mission.status !== 'En camino - bateria baja') {
             return mission
           }
@@ -233,21 +294,14 @@ export function AppProvider({ children }) {
           }
 
           const nextPoint = waypoints[currentStep]
-          const newBattery = Math.max(5, (mission.current_battery || 100) - 1)
+          const newBattery = Math.max(5, (mission.current_battery || 95) - 1)
 
-          // Actualizar posición y batería en el dispositivo correspondiente
-          setDevices(prevDevs =>
-            prevDevs.map(d =>
-              d.id === mission.device_id
-                ? {
-                    ...d,
-                    latitude: nextPoint.lat,
-                    longitude: nextPoint.lng,
-                    battery_level: newBattery
-                  }
-                : d
-            )
-          )
+          // Acumular actualización para el dispositivo
+          deviceUpdates[mission.device_id] = {
+            latitude: nextPoint.lat,
+            longitude: nextPoint.lng,
+            battery_level: newBattery
+          }
 
           // EVALUACIÓN DE CONTINGENCIA DE BATERÍA AL 20% (RF-32.1 a RF-32.3)
           let updatedStatus = mission.status
@@ -277,9 +331,8 @@ export function AppProvider({ children }) {
               updatedStatus = 'Abortado'
               addAuditLog(
                 'CONTINGENCIA_BATERIA_ABORTADA',
-                `Misión ${mission.id}: Batería crítica al ${newBattery}%. Reserva proyectada ${feasibility.projectedResidual}% < 10%. Retorno a base activado (RTH).`
+                `Misión ${mission.id}: Batería crítica al ${newBattery}%. Reserva proyectada < 10%. Retorno a base activado (RTH).`
               )
-              // Disparar alerta visual y sonora
               triggerEmergency(mission.id, 'BATERIA_CRITICA_RETORNO')
             }
           }
@@ -299,13 +352,32 @@ export function AppProvider({ children }) {
             status: updatedStatus
           }
         })
+
+        // Sincronizar dispositivos fuera de la iteración de missions para evitar render locks
+        if (Object.keys(deviceUpdates).length > 0) {
+          setDevices(prevDevices =>
+            prevDevices.map(d => {
+              if (deviceUpdates[d.id]) {
+                return {
+                  ...d,
+                  latitude: deviceUpdates[d.id].latitude,
+                  longitude: deviceUpdates[d.id].longitude,
+                  battery_level: deviceUpdates[d.id].battery_level
+                }
+              }
+              return d
+            })
+          )
+        }
+
+        return nextMissions
       })
 
       // 2. Simulación de recarga de dispositivos "En carga" (RF-34)
       setDevices(prevDevices =>
         prevDevices.map(device => {
           if (device.status === 'En carga') {
-            const charged = Math.min(100, device.battery_level + 3)
+            const charged = Math.min(100, device.battery_level + 2)
             // Si alcanza >= 80%, se libera a Disponible (RF-34)
             if (charged >= 80 && device.battery_level < 80) {
               addAuditLog(
@@ -326,7 +398,7 @@ export function AppProvider({ children }) {
           return device
         })
       )
-    }, 5000)
+    }, 2500)
 
     return () => clearInterval(interval)
   }, [meetingPoints])
@@ -352,13 +424,13 @@ export function AppProvider({ children }) {
       return { success: false, error: `El código alfanumérico '${deviceData.code.trim().toUpperCase()}' ya existe en el inventario. Debe ser único (RF-04.2).` }
     }
 
-    // Validar carga útil nominal (Dron <= 2.0 kg, Robot <= 10.0 kg - RF-04.1)
+    // Validar carga útil nominal (Dron <= 0.5 kg, Robot <= 1.0 kg - RF-04.1 Nuevo SRS)
     const payload = parseFloat(deviceData.max_payload_kg)
-    if (deviceData.type === 'UAV' && (payload <= 0 || payload > 2.0)) {
-      return { success: false, error: 'Los drones (UAV) tienen una capacidad máxima de hasta 2.0 kg (RF-04.1).' }
+    if (deviceData.type === 'UAV' && (payload <= 0 || payload > 0.5)) {
+      return { success: false, error: 'Los drones (UAV) tienen una capacidad máxima de hasta 0.5 kg (RF-04.1 - Nuevo SRS).' }
     }
-    if (deviceData.type === 'UGV' && (payload <= 0 || payload > 10.0)) {
-      return { success: false, error: 'Los robots terrestres (UGV) tienen una capacidad de hasta 10.0 kg (RF-04.1).' }
+    if (deviceData.type === 'UGV' && (payload <= 0 || payload > 1.0)) {
+      return { success: false, error: 'Los robots terrestres (UGV) tienen una capacidad de hasta 1.0 kg (RF-04.1 - Nuevo SRS).' }
     }
 
     const newDevice = {
@@ -427,7 +499,7 @@ export function AppProvider({ children }) {
   }
 
   // =========================================================================
-  // GESTIÓN DE RESERVAS Y SOLICITUDES (RF-08, RF-09, RF-10)
+  // GESTIÓN DE RESERVAS Y SOLICITUDES (RF-08, RF-09, RF-10, Nuevo SRS)
   // =========================================================================
   const createReservation = (data) => {
     // Validación federada simulada SIU (RF-08, RR-05)
@@ -438,6 +510,20 @@ export function AppProvider({ children }) {
       }
     }
 
+    const payload = parseFloat(data.payload_weight_kg || 0)
+    if (payload <= 0 || payload > 1.0) {
+      return {
+        success: false,
+        error: 'El peso de la carga excede el límite operacional permitido en el campus (máx 0.5 kg para drones UAV, 1.0 kg para robots terrestres UGV según nuevo SRS).'
+      }
+    }
+
+    // Preasignación de máquina sugerida (RF-14.1)
+    const isFlightBad = weather.windSpeedKmh > 25 || weather.isRaining || !weather.apiHealthy
+    const preferredType = (payload <= 0.5 && data.priority === 'Alta' && !isFlightBad) ? 'UAV' : 'UGV'
+    const suitableDevice = devices.find(d => d.type === preferredType && d.status === 'Disponible' && d.max_payload_kg >= payload)
+    const assignedCode = suitableDevice ? suitableDevice.code : (preferredType === 'UAV' ? 'UAV-01' : 'UGV-01')
+
     const newRes = {
       id: 'res-' + Math.floor(100 + Math.random() * 900),
       requester_id: data.requester_id.trim(),
@@ -446,19 +532,25 @@ export function AppProvider({ children }) {
       recipient_phone: data.recipient_phone.trim(),
       service_type: data.service_type, // 'Transporte' | 'Grabacion'
       priority: data.priority || 'Normal',
-      payload_weight_kg: parseFloat(data.payload_weight_kg || 0),
+      payload_weight_kg: payload,
       origin_point_id: data.origin_point_id,
       destination_point_id: data.destination_point_id,
       scheduled_time: data.scheduled_time || new Date(Date.now() + 35 * 60000).toISOString(),
       status: 'Programada',
+      assigned_device_code: assignedCode,
+      assigned_device_type: preferredType,
       created_at: new Date().toISOString()
     }
 
     setReservations(prev => [newRes, ...prev])
     addAuditLog(
       'CREACION_RESERVA',
-      `Nueva reserva ${newRes.id} creada por ${newRes.requester_name} (${newRes.service_type}, Carga: ${newRes.payload_weight_kg} kg).`
+      `Nueva reserva ${newRes.id} creada por ${newRes.requester_name} (${newRes.service_type}, Carga: ${newRes.payload_weight_kg} kg). Máquina sugerida/asignada: ${assignedCode} (${preferredType}).`
     )
+
+    if (data.autoDispatch) {
+      setTimeout(() => dispatchMission(newRes.id), 120)
+    }
 
     return { success: true, reservation: newRes }
   }
@@ -476,9 +568,9 @@ export function AppProvider({ children }) {
       return { success: false, error: 'Puntos de encuentro no válidos en catálogo (RF-11).' }
     }
 
-    // Regla de Selección Algorítmica (RF-14.1):
-    // Dron si peso <= 2.0 kg y prioridad alta; Robot si peso > 2.0 kg o prioridad normal o clima adverso
-    let preferredType = (res.payload_weight_kg <= 2.0 && res.priority === 'Alta') ? 'UAV' : 'UGV'
+    // Regla de Selección Algorítmica (RF-14.1 - Nuevo SRS):
+    // Dron si peso <= 0.5 kg y prioridad alta; Robot si peso > 0.5 kg (hasta 1.0 kg) o prioridad normal o clima adverso
+    let preferredType = (res.payload_weight_kg <= 0.5 && res.priority === 'Alta') ? 'UAV' : 'UGV'
 
     // VALIDACIÓN METEOROLÓGICA CON FALLA SEGURA (RF-16)
     const isBadWeatherForFlight = weather.windSpeedKmh > 25 || weather.isRaining || !weather.apiHealthy
@@ -490,7 +582,7 @@ export function AppProvider({ children }) {
       else if (!weather.apiHealthy) weatherReason = 'Falla de conexión con API meteorológica (Falla segura)'
 
       // Reasignación automática a Robot Terrestre si la masa lo permite (RF-14.1, CU-14 E5)
-      if (res.payload_weight_kg <= 10.0) {
+      if (res.payload_weight_kg <= 1.0) {
         preferredType = 'UGV'
         addAuditLog(
           'FALLA_SEGURA_METEOROLOGIA',
@@ -668,13 +760,39 @@ export function AppProvider({ children }) {
   // =========================================================================
   // GESTIÓN DE ALERTAS Y EMERGENCIAS (RF-30, RF-31)
   // =========================================================================
-  const triggerEmergency = (missionId, emergencyType) => {
-    const mission = missions.find(m => m.id === missionId)
+  const triggerEmergency = (targetIdOrType, emergencyTypeParam) => {
+    let target = targetIdOrType
+    let type = emergencyTypeParam
+
+    // Permitir llamar como triggerEmergency('IMPACTO_CAIDA') sin target explícito
+    if (!type) {
+      type = target
+      const active = missions.find(m => m.status === 'En camino' || m.status === 'En camino - bateria baja')
+      target = active ? active.id : (devices[0]?.id || 'dev-001')
+    }
+
+    // Buscar si target es una misión o un dispositivo
+    const mission = missions.find(m => m.id === target || m.device_id === target || m.device_code === target)
+    let deviceId = null
+    let deviceCode = 'DEV-01'
+
+    if (mission) {
+      deviceId = mission.device_id
+      deviceCode = mission.device_code
+    } else {
+      const dev = devices.find(d => d.id === target || d.code === target)
+      deviceId = dev ? dev.id : (devices[0]?.id || 'dev-001')
+      deviceCode = dev ? dev.code : 'DEV-01'
+    }
+
+    const missionId = mission ? mission.id : 'N/A'
+
     const newAlert = {
       id: 'alt-' + Math.random().toString(36).substring(2, 7),
       mission_id: missionId,
-      device_code: mission ? mission.device_code : 'DEV-?',
-      type: emergencyType, // 'DESVIO_RUTA_10M' | 'BATERIA_MENOR_15' | 'PERDIDA_TELEMETRIA_15S' | 'IMPACTO_CAIDA'
+      device_id: deviceId,
+      device_code: deviceCode,
+      type: type, // 'DESVIO_RUTA_10M' | 'BATERIA_MENOR_15' | 'PERDIDA_TELEMETRIA_15S' | 'IMPACTO_CAIDA' | 'BATERIA_CRITICA_RETORNO'
       status: 'Activa',
       created_at: new Date().toISOString()
     }
@@ -683,32 +801,62 @@ export function AppProvider({ children }) {
 
     addAuditLog(
       'ALERTA_EMERGENCIA',
-      `EMERGENCIA [${emergencyType}] detectada en misión ${missionId}. Notificación sonora y visual enviada a Administrador y Seguridad (RF-30).`
+      `EMERGENCIA [${type}] detectada en dispositivo ${deviceCode} (Misión ${missionId}). Notificación sonora y visual a Seguridad. Dispositivo puesto en 'Fuera de servicio' (RF-30).`
     )
 
-    // Si es impacto o caída, detener y poner en Fuera de servicio (CU-23 Rama 3)
-    if (emergencyType === 'IMPACTO_CAIDA' && mission) {
-      setDevices(prev =>
-        prev.map(d => (d.id === mission.device_id ? { ...d, status: 'Fuera de servicio' } : d))
-      )
+    // EN TODO INCIDENTE DE EMERGENCIA:
+    // El robot sale INMEDIATAMENTE de operación ('Fuera de servicio'), disminuyendo la cantidad de robots en operación
+    setDevices(prev =>
+      prev.map(d => (d.id === deviceId ? { ...d, status: 'Fuera de servicio' } : d))
+    )
+
+    // Si estaba en misión activa, frenar el robot en el mapa abortando la misión y marcando la reserva como Interrumpida
+    if (mission) {
       setMissions(prev =>
-        prev.map(m => (m.id === missionId ? { ...m, status: 'Abortado' } : m))
+        prev.map(m => (m.id === mission.id ? { ...m, status: 'Abortado' } : m))
+      )
+      setReservations(prev =>
+        prev.map(r => (r.id === mission.reservation_id ? { ...r, status: 'Interrumpido' } : r))
       )
     }
+
+    return { success: true, alert: newAlert }
   }
 
-  const resolveAlert = (alertId, notes, securityOfficerName) => {
+  const resolveAlert = (alertId, notes, securityOfficerName, restoreStatus = 'Disponible') => {
+    const alert = alerts.find(a => a.id === alertId)
+
     setAlerts(prev =>
       prev.map(a =>
         a.id === alertId
-          ? { ...a, status: 'Atendida', resolutionNotes: notes, resolvedBy: securityOfficerName, resolvedAt: new Date().toISOString() }
+          ? {
+              ...a,
+              status: 'Atendida',
+              resolutionNotes: notes,
+              resolvedBy: securityOfficerName,
+              resolvedAt: new Date().toISOString()
+            }
           : a
       )
     )
 
+    // Restituir el dispositivo a 'Disponible' (o el estado elegido) si estaba Fuera de servicio
+    if (alert) {
+      const devId = alert.device_id || devices.find(d => d.code === alert.device_code)?.id
+      if (devId) {
+        setDevices(prev =>
+          prev.map(d =>
+            d.id === devId && d.status === 'Fuera de servicio'
+              ? { ...d, status: restoreStatus }
+              : d
+          )
+        )
+      }
+    }
+
     addAuditLog(
       'CIERRE_INCIDENTE_SEGURIDAD',
-      `Incidente ${alertId} atendido y cerrado por Operador de Seguridad (${securityOfficerName}). Observaciones: ${notes} (RF-31).`
+      `Incidente ${alertId} atendido y cerrado por Operador de Seguridad (${securityOfficerName}). Dispositivo restituido a '${restoreStatus}' (RF-31). Observaciones: ${notes}`
     )
   }
 

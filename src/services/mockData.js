@@ -153,7 +153,7 @@ export const INITIAL_DEVICES = [
     code: 'UGV-01',
     type: 'UGV',
     model: 'Scout Rover X4 (Terrestre)',
-    max_payload_kg: 8.0,
+    max_payload_kg: 1.0,
     battery_level: 95,
     status: 'Disponible', // 'Disponible' | 'En servicio' | 'En carga' | 'En mantenimiento' | 'Fuera de servicio'
     latitude: 3.345846,
@@ -171,7 +171,7 @@ export const INITIAL_DEVICES = [
     code: 'UGV-02',
     type: 'UGV',
     model: 'Titan Hauler Pro (Terrestre)',
-    max_payload_kg: 10.0,
+    max_payload_kg: 1.0,
     battery_level: 88,
     status: 'Disponible',
     latitude: 3.345846,
@@ -189,7 +189,7 @@ export const INITIAL_DEVICES = [
     code: 'UGV-03',
     type: 'UGV',
     model: 'Carrier Lite (Terrestre)',
-    max_payload_kg: 5.0,
+    max_payload_kg: 0.8,
     battery_level: 42,
     status: 'En carga', // En carga hasta alcanzar >= 80% (RF-34)
     latitude: 3.345846,
@@ -207,11 +207,11 @@ export const INITIAL_DEVICES = [
     code: 'UAV-01',
     type: 'UAV',
     model: 'SkyCourier Hexacopter (Dron)',
-    max_payload_kg: 1.8,
-    battery_level: 100,
-    status: 'Disponible',
-    latitude: 3.345846,
-    longitude: -76.532882,
+    max_payload_kg: 0.5,
+    battery_level: 94,
+    status: 'En servicio', // En vuelo demostrativo activo (misión mis-1001)
+    latitude: 3.346850,
+    longitude: -76.532250,
     max_speed_kmh: 35,
     max_altitude_m: 60,
     camera_resolution: '4K',
@@ -225,7 +225,7 @@ export const INITIAL_DEVICES = [
     code: 'UAV-02',
     type: 'UAV',
     model: 'Falcon Express Quad (Dron)',
-    max_payload_kg: 2.0,
+    max_payload_kg: 0.5,
     battery_level: 90,
     status: 'Disponible',
     latitude: 3.345846,
@@ -243,7 +243,7 @@ export const INITIAL_DEVICES = [
     code: 'UAV-03',
     type: 'UAV',
     model: 'Aerocam Surveyor (Dron)',
-    max_payload_kg: 1.2,
+    max_payload_kg: 0.4,
     battery_level: 82,
     status: 'Disponible',
     latitude: 3.345846,
@@ -267,11 +267,11 @@ export const INITIAL_RESERVATIONS = [
     recipient_phone: '+57 315 889 4521',
     service_type: 'Transporte',
     priority: 'Alta',
-    payload_weight_kg: 1.2, // Ligero -> UAV-01
+    payload_weight_kg: 0.4, // Ligero (<= 0.5kg) -> UAV-01
     origin_point_id: 'mp-001', // Samán
     destination_point_id: 'mp-003', // Biblioteca
     scheduled_time: new Date(Date.now() + 45 * 60000).toISOString(),
-    status: 'Programada', // 'Programada' | 'Asignada' | 'Despachado' | 'Entregado' | 'Interrumpido' | 'Cancelado'
+    status: 'Despachado', // Misión activa en ruta a Biblioteca con UAV-01
     created_at: new Date(Date.now() - 20 * 60000).toISOString()
   },
   {
@@ -282,7 +282,7 @@ export const INITIAL_RESERVATIONS = [
     recipient_phone: '+57 300 456 7890',
     service_type: 'Transporte',
     priority: 'Normal',
-    payload_weight_kg: 5.5, // Pesado (>2kg) -> UGV-01 o UGV-02
+    payload_weight_kg: 0.8, // Pesado (> 0.5kg hasta 1.0kg) -> UGV-01 o UGV-02
     origin_point_id: 'mp-006', // Lab Robótica
     destination_point_id: 'mp-001', // Samán
     scheduled_time: new Date(Date.now() + 90 * 60000).toISOString(),
@@ -304,7 +304,7 @@ export const INITIAL_AUDIT_LOGS = [
     id: 'log-002',
     user_email: 'operativo@puj.edu.co',
     action: 'CREACION_RESERVA',
-    details: 'Reserva res-101 registrada: transporte de 1.2 kg de Edificio Samán a Biblioteca.',
+    details: 'Reserva res-101 registrada: transporte de 0.4 kg de Edificio Samán a Biblioteca.',
     ip_address: '192.168.1.112',
     timestamp_utc: new Date(Date.now() - 20 * 60000).toISOString()
   }

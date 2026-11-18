@@ -33,6 +33,10 @@ export default function Dashboard({ onNavigate }) {
   const availableDevices = devices.filter(d => d.status === 'Disponible').length
   const chargingDevices = devices.filter(d => d.status === 'En carga').length
   const inServiceDevices = devices.filter(d => d.status === 'En servicio').length
+  const outOfServiceDevices = devices.filter(d => d.status === 'Fuera de servicio').length
+  const maintenanceDevices = devices.filter(d => d.status === 'En mantenimiento').length
+  const operationalDevices = availableDevices + inServiceDevices + chargingDevices
+
   const activeMissions = missions.filter(
     m => m.status === 'En camino' || m.status === 'En camino - bateria baja'
   )
@@ -85,30 +89,42 @@ export default function Dashboard({ onNavigate }) {
 
       {/* KPI Cards Grid - Clean Google Stitch Surfaces */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Devices */}
+        {/* Total Devices / Operational Devices */}
         <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-stitch-card space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Flota Registrada</span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100/80 border border-slate-200/60 flex items-center justify-center text-slate-700">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Flota en Operación</span>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+              outOfServiceDevices > 0 ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-slate-100/80 border-slate-200/60 text-slate-700'
+            }`}>
               <DroneMinimalIcon className="w-4 h-4" />
             </div>
           </div>
           <div className="space-y-1">
             <div className="flex items-baseline space-x-2">
-              <span className="text-2xl font-bold text-slate-900 font-mono tracking-tight">{totalDevices}</span>
-              <span className="text-xs text-slate-400 font-mono">/ 20 máx (RNF-06)</span>
+              <span className={`text-2xl font-bold font-mono tracking-tight ${
+                outOfServiceDevices > 0 ? 'text-amber-800' : 'text-slate-900'
+              }`}>
+                {operationalDevices}
+              </span>
+              <span className="text-xs text-slate-400 font-mono">/ {totalDevices} registrados</span>
             </div>
             {/* Visual utilization bar */}
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-[#002855] h-full rounded-full transition-all duration-500"
-                style={{ width: `${(totalDevices / 20) * 100}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  outOfServiceDevices > 0 ? 'bg-amber-600' : 'bg-[#002855]'
+                }`}
+                style={{ width: `${(operationalDevices / totalDevices) * 100}%` }}
               />
             </div>
           </div>
           <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-slate-100">
             <span className="text-emerald-700 font-semibold">{availableDevices} Disponibles</span>
-            <span className="text-amber-700 font-semibold">{chargingDevices} En Carga</span>
+            {outOfServiceDevices > 0 ? (
+              <span className="text-rose-600 font-bold">{outOfServiceDevices} Fuera de servicio</span>
+            ) : (
+              <span className="text-blue-700 font-semibold">{inServiceDevices} En Servicio</span>
+            )}
           </div>
         </div>
 

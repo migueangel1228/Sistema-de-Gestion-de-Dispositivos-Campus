@@ -43,7 +43,7 @@ export const COMPLIANCE_ITEMS = [
     standard: 'RF-04.1 / RR-09',
     category: 'RF-04: Inventario de Flota',
     status: 'Cumplido',
-    description: 'Permite registrar un nuevo dispositivo capturando código alfanumérico único, tipo (UGV o UAV), modelo y carga nominal (hasta 2.0 kg drones y 10.0 kg robots), inicializando en "Disponible".'
+    description: 'Permite registrar un nuevo dispositivo capturando código alfanumérico único, tipo (UGV o UAV), modelo y carga nominal (hasta 0.5 kg drones y 1.0 kg robots según nuevo SRS), inicializando en "Disponible".'
   },
   {
     id: 'RF-04.2',
@@ -92,7 +92,7 @@ export const COMPLIANCE_ITEMS = [
     standard: 'RF-14.1',
     category: 'RF-14: Asignación y Despacho',
     status: 'Cumplido',
-    description: 'Selecciona automáticamente: asigna Dron (UAV) si masa <= 2.0 kg y prioridad Alta; asigna Robot Terrestre (UGV) si masa > 2.0 kg (hasta 10.0 kg), prioridad Normal o clima adverso.'
+    description: 'Selecciona automáticamente: asigna Dron (UAV) si masa <= 0.5 kg y prioridad Alta; asigna Robot Terrestre (UGV) si masa > 0.5 kg (hasta 1.0 kg), prioridad Normal o clima adverso (Nuevo SRS).'
   },
   {
     id: 'RF-14.2',

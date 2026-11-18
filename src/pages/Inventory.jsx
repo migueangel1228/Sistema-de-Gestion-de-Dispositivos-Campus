@@ -76,12 +76,12 @@ export default function Inventory() {
     }
 
     const payload = parseFloat(editFormData.max_payload_kg)
-    if (selectedDevice.type === 'UAV' && (payload <= 0 || payload > 2.0)) {
-      setEditErrorMsg('Los drones (UAV) tienen una capacidad máxima de hasta 2.0 kg (RF-04.1 / RF-04.3).')
+    if (selectedDevice.type === 'UAV' && (payload <= 0 || payload > 0.5)) {
+      setEditErrorMsg('Los drones (UAV) tienen una capacidad máxima de hasta 0.5 kg (RF-04.1 / RF-04.3 - Nuevo SRS).')
       return
     }
-    if (selectedDevice.type === 'UGV' && (payload <= 0 || payload > 10.0)) {
-      setEditErrorMsg('Los robots terrestres (UGV) tienen una capacidad máxima de hasta 10.0 kg (RF-04.1 / RF-04.3).')
+    if (selectedDevice.type === 'UGV' && (payload <= 0 || payload > 1.0)) {
+      setEditErrorMsg('Los robots terrestres (UGV) tienen una capacidad máxima de hasta 1.0 kg (RF-04.1 / RF-04.3 - Nuevo SRS).')
       return
     }
 
@@ -382,13 +382,13 @@ export default function Inventory() {
                     type="number"
                     step="0.1"
                     required
-                    placeholder={formData.type === 'UAV' ? 'Máx 2.0 kg' : 'Máx 10.0 kg'}
+                    placeholder={formData.type === 'UAV' ? 'Máx 0.5 kg' : 'Máx 1.0 kg'}
                     value={formData.max_payload_kg}
                     onChange={(e) => setFormData({ ...formData, max_payload_kg: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#002855]"
                   />
                   <span className="text-[10px] text-slate-500">
-                    {formData.type === 'UAV' ? 'Dron <= 2.0 kg' : 'Robot <= 10.0 kg'}
+                    {formData.type === 'UAV' ? 'Dron <= 0.5 kg' : 'Robot <= 1.0 kg (SRS)'}
                   </span>
                 </div>
               </div>
@@ -581,7 +581,7 @@ export default function Inventory() {
                     className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#002855]"
                   />
                   <span className="text-[10px] text-slate-500">
-                    {selectedDevice.type === 'UAV' ? 'Dron <= 2.0 kg' : 'Robot <= 10.0 kg'}
+                    {selectedDevice.type === 'UAV' ? 'Dron <= 0.5 kg' : 'Robot <= 1.0 kg (SRS)'}
                   </span>
                 </div>
 

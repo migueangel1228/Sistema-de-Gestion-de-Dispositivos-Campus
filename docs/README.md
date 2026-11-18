@@ -84,7 +84,7 @@ El documento principal de requisitos se encuentra en:
 
 ### Resumen de Requisitos Clave:
 - **RF-01 a RF-03**: Autenticación RBAC con expiración de 15 min y bloqueo preventivo de 5 intentos fallidos en 10 min.
-- **RF-04 a RF-07**: Inventario de flota segregada (Drones $\le 2.0\text{ kg}$ vs. Robots $\le 10.0\text{ kg}$).
+- **RF-04 a RF-07**: Inventario de flota segregada (Drones $\le 0.5\text{ kg}$ vs. Robots $\le 1.0\text{ kg}$ según nuevo SRS).
 - **RF-08 a RF-11**: Reservas institucionales federadas con puntos de encuentro georreferenciados del Campus PUJ.
 - **RF-14 a RF-17**: Asignación automática con validación climática RAC 100 (viento $\le 25\text{ km/h}$, lluvia, falla segura) y factibilidad de reserva de batería ($\ge 20\%$).
 - **RF-22 a RF-25**: Handover seguro mediante OTP de 6 dígitos con HMAC-SHA256 y QR transmitido por canales SMS/Email.

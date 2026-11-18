@@ -37,7 +37,7 @@ Diseñado bajo lineamientos de ingeniería de requisitos **ISO/IEC/IEEE 29148:20
 - **Herramienta de Calibración Integrada (Modo Debug)**: Permite ajustar y arrastrar interactivamente los puntos de encuentro en el mapa con exportación automática a código JavaScript.
 
 ### 2. Algoritmo de Asignación y Despacho Inteligente
-- **Selección de Tipo de Vehículo**: Asignación automática a dron para cargas ligeras ($\le 2.0\text{ kg}$) con prioridad alta, o robot terrestre para bultos mayores (hasta $10.0\text{ kg}$).
+- **Selección de Tipo de Vehículo**: Asignación automática a dron para cargas ligeras ($\le 0.5\text{ kg}$) con prioridad alta, o robot terrestre para bultos mayores (hasta $1.0\text{ kg}$) conforme al nuevo SRS.
 - **Validación Meteorológica RAC 100 (Falla Segura)**: Bloqueo inmediato de vuelos UAV si la velocidad del viento supera los $25\text{ km/h}$, si hay lluvia activa o si se pierde conectividad con el servicio meteorológico. En caso de condición adversa, reasigna automáticamente a robot terrestre (RF-16).
 - **Evaluación Energética Pre-Despacho**: Comprobación matemática de reserva de batería residual ($\ge 20\%$) cubriendo la trayectoria completa de ida y retorno a la estación de recarga (RF-14.2).
 
@@ -200,7 +200,7 @@ El sistema cuenta con un modal de auditoría interactivo accesible desde la barr
 1. **RF-01**: Autenticación con credenciales institucionales.
 2. **RF-02**: Control de inactividad con cierre automático a los 15 minutos.
 3. **RF-03**: Control de acceso basado en roles (RBAC).
-4. **RF-04**: Registro y catálogo de drones ($\le 2\text{ kg}$) y robots ($\le 10\text{ kg}$).
+4. **RF-04**: Registro y catálogo de drones ($\le 0.5\text{ kg}$) y robots ($\le 1.0\text{ kg}$) según nuevo SRS.
 5. **RF-08**: Integración federada con solicitudes SIU.
 6. **RF-11**: Catálogo de 12 puntos de encuentro georreferenciados en el campus.
 7. **RF-14**: Despacho automatizado con selección por peso y prioridad.
